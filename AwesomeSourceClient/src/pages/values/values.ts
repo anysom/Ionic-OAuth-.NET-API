@@ -21,4 +21,13 @@ export class ValuesPage {
       console.log('values page, get values', response);
     });
   }
+
+  logout () {
+    this.authentication.logout()
+    .subscribe (response => {
+      console.log('logout response', response);
+      this.navCtrl.pop();
+    })
+
+  }
 }

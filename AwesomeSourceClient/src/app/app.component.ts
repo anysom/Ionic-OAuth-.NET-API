@@ -2,6 +2,7 @@ import { Component, ViewChild } from '@angular/core';
 import { Nav, Platform } from 'ionic-angular';
 import { StatusBar, Splashscreen } from 'ionic-native';
 import { HttpModule } from '@angular/http';
+import { Storage } from '@ionic/storage';
 
 import { Authentication, FacebookAuthentication, CredentialsAuthentication, Values, GlobalSettings, User } from '../shared/shared';
 
@@ -13,6 +14,7 @@ import '../shared/rxjs-operators';
   templateUrl: 'app.html',
   providers: [
     HttpModule,
+    Storage,
     Authentication,
     FacebookAuthentication,
     CredentialsAuthentication,

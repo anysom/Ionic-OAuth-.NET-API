@@ -39,11 +39,15 @@ export class FacebookAuthentication {
     // InAppBrowser again.
     browser.on("loadstop")
     .subscribe((e) => {
-     var accessToken = e.url.match(/\#(?:access_token)\=([\S\s]*?)\&/)[1];
-     browser.close();
+      // If i can extract an access token from the query string, save it and close the window.
+      let accessTokenQueryParams = e.url.match(/\#(?:access_token)\=([\S\s]*?)\&/);
+      if (accessTokenQueryParams != null) {
+        let accessToken = accessTokenQueryParams[1];
+        browser.close();
 
-     loginScreenSubject.next(accessToken);
-     loginScreenSubject.complete();
+        loginScreenSubject.next(accessToken);
+        loginScreenSubject.complete();
+      }
     },
     err => {
       console.log("InAppBrowser Loadstop Event Error: " + err);
@@ -83,4 +87,19 @@ export class FacebookAuthentication {
 
     return this.accessTokenSubject;
   };
+
+  logout () {
+    // Open a browser window that cleares the InAppBrowser cache in order to forget the entered Facebook credentials.
+    // The URL for the page does not have to be an existing page.
+    // The important stuff here is just that the window is opened and the cahce cleared
+    let browser = new InAppBrowser('/logout', '_blank', 'location=no,toolbar=no,hardwareback=no,EnableViewPortScale=yes,clearcache=yes,clearsessioncache=yes');
+
+    browser.on("loadstop")
+    .subscribe((e) => {
+     browser.close();
+    },
+    err => {
+      console.log("InAppBrowser Loadstop Event Error: " + err);
+    });
+  }
 }

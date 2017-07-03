@@ -29,7 +29,7 @@
 	</div>
 </div>
 
-@*<script src="https://code.jquery.com/jquery-3.2.1.min.js"
+<script src="https://code.jquery.com/jquery-3.2.1.min.js"
 				integrity="sha256-hwg4gsxgFZhOsEEamdOYGBf13FyQuiTwlAQgxVSNgt4="
 				crossorigin="anonymous"></script>
 
@@ -38,27 +38,43 @@
 	// function that runs when the site starts up.
 	function startup() {
 		console.log('startup');
+
 		// if authorized, fetch secret resource
-		var authorized = false;
-
-		if (authorized) {
-
+		if (localStorage.getItem('access_token')) {
+			getAuthorizedResource();
 		} else {
 			getExternalLoginUrl(function (fbLoginUrl) {
-				authenticateWithFacebook(fbLoginUrl);
+				authenticateWithFacebook(fbLoginUrl, onFacebookAuthenticated);
 			});
 		}
 	}
 
 	// Authenticate with Facebook
-	function authenticateWithFacebook(fbLoginUrl) {
+	function authenticateWithFacebook(fbLoginUrl, callback) {
 		console.log('authenticateWithFacebook');
 
-		//window.location.href = fbLoginUrl;
-
 		var newwindow;
+		// WINDOW POPUP VERSION
 		function createPop(url, name) {
 			newwindow = window.open(url, name, 'width=560,height=340,toolbar=0,menubar=0,location=0');
+			newwindow.addEventListener('load', function (e) {
+				console.log('popup loaded', e);
+
+				// get access token from url
+				var queryParams = e.path[0].location.hash.match(/\#(?:access_token)\=([\S\s]*?)\&/);
+				var accessToken;
+
+				if (queryParams) {
+					accessToken = queryParams[1]
+				}
+				
+				newwindow.close();
+				
+				// invoke callback with the token;
+				if (callback) {
+					callback(accessToken);
+				}
+			}, false);
 			if (window.focus) { newwindow.focus() }
 		}
 
@@ -71,7 +87,8 @@
 	function getExternalLoginUrl(callback) {
 		console.log('getExternalLoginUrl');
 		// Return URL for an HTML app is just a local page. This page does NOT need to exist in the app.
-		var returnUrl = 'http:%2F%2Flocalhost%2Fcallback'; //'http:%2F%2Flocalhost:52146%2Fcallback';
+		// BUT the return URL has to be in the same domain in order to attach on load eventlisteners.
+		var returnUrl = '%2F';//'http:%2F%2Flocalhost%2Fcallback'; //'http:%2F%2Flocalhost:52146%2Fcallback';
 
 		$.ajax({
 			url: '/api/Account/ExternalLogins?returnUrl=' + returnUrl + '&generateState=true',
@@ -87,20 +104,93 @@
 			}
 		});
 	}
-	
-	// Log a user in to the backend.
-	function login() {
 
+	// When the user has been authenticated and an auth token is retrieved this method is invoked
+	function onFacebookAuthenticated(accessToken) {
+		console.log('onFacebookAuthenticated', accessToken);
+
+		if (!accessToken) {
+			alert('Failed retrieving the Facebook access token');
+			return;
+		}
+		
+		// Store the access token
+		localStorage.setItem('access_token', accessToken);
+
+		determineUserExistance(accessToken);
 	}
 
-	// Function that signs up a user with facebook
-	function signup() {
+	// Gets the details about a user from the backend.
+	function getUserInfo(callback) {
+		console.log('getUserInfo');
 
+		$.ajax({
+			url: '/api/Account/UserInfo',
+			type: 'GET',
+			headers: {'Authorization': 'Bearer ' + localStorage.getItem('access_token')},
+			success: function (response) {
+				console.log('getUserInfo - response', response);
+
+				if (callback) {
+					callback(response);
+				}
+			}
+		});
+	}
+
+
+	// Checks if a user exists and if not, initiates the register flow
+	function determineUserExistance(accessToken) {
+		console.log('determineUserExistance');
+		getUserInfo(function (userInfo) {
+			if (userInfo && userInfo.HasRegistered) {
+				// If the user exists in the backend, log the user in
+				console.log('determineUserExistance - user exists', userInfo);
+				getAuthorizedResource();
+			} else {
+				// Else take the user through the registration flow
+				console.log('determineUserExistance - user NON-existing', userInfo);
+				signup(userInfo, getAuthorizedResource);
+			}
+		});
+	}
+
+	// Registers a new user in the backend using the facebook access token
+	function signup(userInfo, callback) {
+		console.log('determineUserExistance');
+
+		// Get the users Facebook email or let them type in a new email
+		var userEmail = 'anders@facebook.com';
+
+		$.ajax({
+			url: '/api/Account/RegisterExternal',
+			data: {
+				email: userEmail
+			},
+			type: 'POST',
+			headers: { 'Authorization': 'Bearer ' + localStorage.getItem('access_token') },
+			success: function (response) {
+				console.log('getUserInfo - response', response);
+
+				if (callback) {
+					callback();
+				}
+			}
+		});
 	}
 
 	// Gets a resource from the backend api that requires that you are authorized
 	function getAuthorizedResource() {
+		console.log('getAuthorizedResource');
 
+		$.ajax({
+			url: '/api/Values',
+			type: 'GET',
+			headers: { 'Authorization': 'Bearer ' + localStorage.getItem('access_token') },
+			success: function (response) {
+				console.log('getAuthorizedResource - response', response);
+			}
+		});
 	}
 
 	// Gets the facebook users data. To be used when creating a backend user.
@@ -112,32 +202,4 @@
 		$('#facebook-login').click(startup);
 	});
 
-</script>*@
-
-
-
-<script>
-  window.fbAsyncInit = function() {
-    FB.init({
-      appId      : '1300780379983492',
-      xfbml      : true,
-      version    : 'v2.9'
-    });
-    FB.AppEvents.logPageView();
-
-    FB.getLoginStatus(function (response) {
-    	console.log(response);
-    });
-  };
-
-  (function(d, s, id){
-     var js, fjs = d.getElementsByTagName(s)[0];
-     if (d.getElementById(id)) {return;}
-     js = d.createElement(s); js.id = id;
-     js.src = "//connect.facebook.net/en_US/sdk.js";
-     fjs.parentNode.insertBefore(js, fjs);
-  }(document, 'script', 'facebook-jssdk'));
-
-
-  
 </script>

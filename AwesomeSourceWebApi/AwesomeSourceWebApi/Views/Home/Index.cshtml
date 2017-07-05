@@ -34,18 +34,45 @@
 				crossorigin="anonymous"></script>
 
 <script>
+	/*
+		FACEBOOK LOGIN PROCESS:
+
+		1 - Fetch external login provider URL's from the backend.
+				(/api/Account/ExternalLogins?returnUrl)
+
+		2 - Open a popup with the URL fetched in step 1, to display the external login screen.
+				When the user logs in the popup window gets redirected back to a specified return
+				URL with an access token appended as a hash parameter. The access token is extracted
+				from the URL and the popup window is closed.
+				(/api/Account/ExternalLogin?provider)
+
+		3 - Determine if a user exists in the backend system matching the external login.
+				(/api/Account/UserInfo)
+
+				3A.1 -	If the user does not exist, register it in the backend system by calling
+								the RegisterExternal method. This will create a new user instance in the 
+								database on the backend.
+								(/api/Account/RegisterExternal)
+				
+				3A.2 -	Log the user in as the newly created user. This is done by calling the 
+								ExternalLogin method once more and extracting the new access token.
+								(/api/Account/ExternalLogin?provider)
+
+		4 -	Fetch Authorized resource from the backend using the access token.
+				
+	*/
+
 	var baseUrl = '/';
 	// function that runs when the site starts up.
 	function startup() {
 		console.log('startup');
 
-		// if authorized, fetch secret resource
 		if (localStorage.getItem('access_token')) {
-			getAuthorizedResource();
+			onFacebookAuthenticated(localStorage.getItem('access_token'));
 		} else {
-			getExternalLoginUrl(function (fbLoginUrl) {
-				authenticateWithFacebook(fbLoginUrl, onFacebookAuthenticated);
-			});
+		getExternalLoginUrl(function (fbLoginUrl) {
+			authenticateWithFacebook(fbLoginUrl, onFacebookAuthenticated);
+		});
 		}
 	}
 
@@ -72,7 +99,7 @@
 				
 				// invoke callback with the token;
 				if (callback) {
-					callback(accessToken);
+					callback(accessToken, fbLoginUrl);
 				}
 			}, false);
 			if (window.focus) { newwindow.focus() }
@@ -106,7 +133,7 @@
 	}
 
 	// When the user has been authenticated and an auth token is retrieved this method is invoked
-	function onFacebookAuthenticated(accessToken) {
+	function onFacebookAuthenticated(accessToken, fbLoginUrl) {
 		console.log('onFacebookAuthenticated', accessToken);
 
 		if (!accessToken) {
@@ -117,7 +144,7 @@
 		// Store the access token
 		localStorage.setItem('access_token', accessToken);
 
-		determineUserExistance(accessToken);
+		determineUserExistance(accessToken, fbLoginUrl);
 	}
 
 	// Gets the details about a user from the backend.
@@ -140,24 +167,30 @@
 
 
 	// Checks if a user exists and if not, initiates the register flow
-	function determineUserExistance(accessToken) {
+	function determineUserExistance(accessToken, fbLoginUrl) {
 		console.log('determineUserExistance');
 		getUserInfo(function (userInfo) {
 			if (userInfo && userInfo.HasRegistered) {
 				// If the user exists in the backend, log the user in
 				console.log('determineUserExistance - user exists', userInfo);
 				getAuthorizedResource();
+				/*authenticateWithFacebook(fbLoginUrl, function () {
+					console.log('logged in?')
+					getAuthorizedResource();
+				});*/
 			} else {
 				// Else take the user through the registration flow
 				console.log('determineUserExistance - user NON-existing', userInfo);
-				signup(userInfo, getAuthorizedResource);
+				registerExternalUser(userInfo, function () {
+					authenticateWithFacebook(fbLoginUrl, onFacebookAuthenticated);
+				});
 			}
 		});
 	}
 
 	// Registers a new user in the backend using the facebook access token
-	function signup(userInfo, callback) {
-		console.log('determineUserExistance');
+	function registerExternalUser(userInfo, callback) {
+		console.log('RegisterExternalUser');
 
 		// Get the users Facebook email or let them type in a new email
 		var userEmail = 'anders@facebook.com';
@@ -178,6 +211,26 @@
 			}
 		});
 	}
+
+
+	// Logs an external user in to our system. Before doing this you have to authorize with facebook and register the user with our system.
+	function loginExternalUser(facebookLoginUrl, callback) {
+		console.log('loginExternalUser');
+
+		$.ajax({
+			//url: '/api/Account/ExternalLogin?provider=Facebook&response_type=token&client_id=self&redirect_uri=http%3A%2F%2Flocalhost%3A15359%2F&state=QotufgXRptkAfJvcthIOWBnGZydgVkZWsx8YrQepeDk1',
+			url: facebookLoginUrl,
+			type: 'GET',
+			success: function (response) {
+				console.log('loginExternalUser - response', response);
+
+				if (callback) {
+					callback();
+				}
+			}
+		});
+	}
+
 
 	// Gets a resource from the backend api that requires that you are authorized
 	function getAuthorizedResource() {

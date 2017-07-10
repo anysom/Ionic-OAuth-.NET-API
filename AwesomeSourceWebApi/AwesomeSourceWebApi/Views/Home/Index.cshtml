@@ -62,7 +62,7 @@
 				
 	*/
 
-	var baseUrl = '/';
+    var baseUrl = 'http://localhost:52146';//'/';
 	// function that runs when the site starts up.
 	function startup() {
 		console.log('startup');
@@ -83,7 +83,7 @@
 		var newwindow;
 		// WINDOW POPUP VERSION
 		function createPop(url, name) {
-			newwindow = window.open(url, name, 'width=560,height=340,toolbar=0,menubar=0,location=0');
+            newwindow = window.open(baseUrl + url, name, 'width=560,height=340,toolbar=0,menubar=0,location=0');
 			newwindow.addEventListener('load', function (e) {
 				console.log('popup loaded', e);
 
@@ -115,17 +115,17 @@
 		console.log('getExternalLoginUrl');
 		// Return URL for an HTML app is just a local page. This page does NOT need to exist in the app.
 		// BUT the return URL has to be in the same domain in order to attach on load eventlisteners.
-		var returnUrl = '%2F';//'http:%2F%2Flocalhost%2Fcallback'; //'http:%2F%2Flocalhost:52146%2Fcallback';
+        var returnUrl = 'http:%2F%2Flocalhost:52146%2Fcallback';//'%2F';//'http:%2F%2Flocalhost%2Fcallback'; //;
 
 		$.ajax({
-			url: '/api/Account/ExternalLogins?returnUrl=' + returnUrl + '&generateState=true',
+            url: baseUrl + '/api/Account/ExternalLogins?returnUrl=' + returnUrl + '&generateState=true',
 			type: 'GET',
 			success: function (response) {
 				console.log('getExternalLoginUrl - response', response);
 
 				if (callback) {
 					// get the facebook url. Facebook is the first of the returned external login providers
-					var fbLoginUrl = response[0].Url;
+                    var fbLoginUrl = response[0].Url || response[0].url;
 					callback(fbLoginUrl);
 				}
 			}
@@ -152,7 +152,7 @@
 		console.log('getUserInfo');
 
 		$.ajax({
-			url: '/api/Account/UserInfo',
+            url: baseUrl + '/api/Account/UserInfo',
 			type: 'GET',
 			headers: {'Authorization': 'Bearer ' + localStorage.getItem('access_token')},
 			success: function (response) {
@@ -170,7 +170,7 @@
 	function determineUserExistance(accessToken, fbLoginUrl) {
 		console.log('determineUserExistance');
 		getUserInfo(function (userInfo) {
-			if (userInfo && userInfo.HasRegistered) {
+            if (userInfo && (userInfo.HasRegistered || userInfo.hasRegistered)) {
 				// If the user exists in the backend, log the user in
 				console.log('determineUserExistance - user exists', userInfo);
 				getAuthorizedResource();
@@ -196,10 +196,14 @@
 		var userEmail = 'anders@facebook.com';
 
 		$.ajax({
-			url: '/api/Account/RegisterExternal',
+            url: baseUrl + '/api/Account/RegisterExternal',
 			data: {
 				email: userEmail
-			},
+            },
+            xhrFields: {
+                withCredentials: true    // Setting this parameter is critical for making the authentication work cross domain
+            },
+            crossDomain: true,
 			type: 'POST',
 			headers: { 'Authorization': 'Bearer ' + localStorage.getItem('access_token') },
 			success: function (response) {
@@ -219,7 +223,7 @@
 
 		$.ajax({
 			//url: '/api/Account/ExternalLogin?provider=Facebook&response_type=token&client_id=self&redirect_uri=http%3A%2F%2Flocalhost%3A15359%2F&state=QotufgXRptkAfJvcthIOWBnGZydgVkZWsx8YrQepeDk1',
-			url: facebookLoginUrl,
+            url: baseUrl + facebookLoginUrl,
 			type: 'GET',
 			success: function (response) {
 				console.log('loginExternalUser - response', response);
@@ -237,7 +241,7 @@
 		console.log('getAuthorizedResource');
 
 		$.ajax({
-			url: '/api/Values',
+            url: baseUrl + '/api/Values',
 			type: 'GET',
 			headers: { 'Authorization': 'Bearer ' + localStorage.getItem('access_token') },
 			success: function (response) {

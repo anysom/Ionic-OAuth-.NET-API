@@ -26,7 +26,7 @@ export class FacebookAuthentication {
     .map( response => {
       // In this instance I am just returning the URL for the Facebook login
       let data = response.json()[0];
-      return data.Url;
+      return data.Url || data.url;
     });
   }
 

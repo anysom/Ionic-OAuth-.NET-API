@@ -1,5 +1,6 @@
 ﻿using Microsoft.Owin.Security.OAuth;
 using System.Web.Http;
+using System.Web.Http.Cors;
 
 namespace AwesomeSourceWebApi
 {
@@ -20,6 +21,12 @@ namespace AwesomeSourceWebApi
                 routeTemplate: "api/{controller}/{id}",
                 defaults: new { id = RouteParameter.Optional }
             );
+
+
+            // IF needed, set the CORS option only for your client domain.
+            // INSTALL the Microsoft.AspNet.WebApi.Cors package
+            //var cors = new EnableCorsAttribute("http://localhost:61107", "*", "*");
+            //config.EnableCors(cors);
         }
     }
 }

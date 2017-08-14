@@ -1,0 +1,30 @@
+﻿
+@{
+    ViewBag.Title = "Oauthcallback";
+}
+
+<h2>Oauthcallback</h2>
+
+<script>
+    function createCookie(name, value, days) {
+        if (days) {
+            var date = new Date();
+            date.setTime(date.getTime() + (days * 24 * 60 * 60 * 1000));
+            var expires = "; expires=" + date.toGMTString();
+        }
+        else var expires = "";
+        document.cookie = name + "=" + value + expires + "; path=/";
+    }
+
+    var queryParams = window.location.hash.match(/\#(?:access_token)\=([\S\s]*?)\&/);
+    console.log('window', window);
+
+    var token;
+    console.log('queryParams', queryParams);
+    if (queryParams) {
+        
+        token = queryParams[1]
+
+        createCookie('fb_access_token', token, 1);
+    }
+</script>

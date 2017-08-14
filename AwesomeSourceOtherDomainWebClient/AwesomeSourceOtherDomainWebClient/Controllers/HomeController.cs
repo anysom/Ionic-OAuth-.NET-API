@@ -13,5 +13,10 @@ namespace AwesomeSourceOtherDomainWebClient.Controllers
         {
             return View();
         }
+
+        public ActionResult Oauthcallback()
+        {
+            return View();
+        }
     }
 }

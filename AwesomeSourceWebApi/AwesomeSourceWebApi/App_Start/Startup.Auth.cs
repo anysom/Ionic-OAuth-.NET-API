@@ -53,8 +53,8 @@ namespace AwesomeSourceWebApi
             //    consumerSecret: "");
 
             app.UseFacebookAuthentication(
-                appId: "***",
-                appSecret: "***");
+                appId: "1300780379983492",
+                appSecret: "ed92facfcf2c43ad562afed809ce4539");
 
             //app.UseGoogleAuthentication(new GoogleOAuth2AuthenticationOptions()
             //{

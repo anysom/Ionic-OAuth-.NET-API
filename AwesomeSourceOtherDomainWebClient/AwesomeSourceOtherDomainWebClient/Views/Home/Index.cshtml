@@ -42,9 +42,9 @@
 
     var apiUrl = 'http://localhost:52146';
     var loginPopup; // shared reference for a popup that will be reused during the login flow. If the window is not reused, the browser will block it.
-	// function that runs when the site starts up.
+	
     var loadedUrl;
-
+    // function that runs when the site starts up.
 	function startup() {
         console.log('startup');
 
@@ -67,34 +67,41 @@
     function authenticateWithFacebook(fbLoginUrl, callback) {
         console.log('authenticateWithFacebook');
 
-        // Add an event listener to the popup that will listen for load events and then extract the access token from the URL      
-        // I don't use the 'load' event because it does not refire when I reuse the popup. Neither does the 'hashchange' event.
         var interval = setInterval(function () {
-            if (loadedUrl !== loginPopup.location.href) {
-                loadedUrl = loginPopup.location.href;
+            //var token = localStorage.getItem('access_token');
+            var token = getCookie('fb_access_token');
+            console.log('access token', token);
 
-                var queryParams = loginPopup.location.hash.match(/\#(?:access_token)\=([\S\s]*?)\&/);
-                var token;
-
-                if (queryParams) {
-                    token = queryParams[1]
-                } else {
-                    return;
-                }
-
+            if (token) {
                 // invoke callback with the token;
                 if (callback) {
                     callback(token, fbLoginUrl);
                 }
+                deleteCookie('fb_access_token');
                 clearInterval(interval);
-            }
-        }, 50);
+            }            
+        }, 100);
 
         // then change the location of the popup to the login enpoint of the API to initiate the login flow.
-        loginPopup.location.href = apiUrl + fbLoginUrl;
-        
+        loginPopup.location.href = apiUrl + fbLoginUrl;        
+
         if (window.focus) { loginPopup.focus() }
-	}
+    }
+
+    function getCookie(name) {
+        var value = "; " + document.cookie;
+        var parts = value.split("; " + name + "=");
+        if (parts.length == 2) return parts.pop().split(";").shift();
+    }
+
+    function deleteCookie(name, path, domain) {
+        if (getCookie(name)) {
+            document.cookie = name + "=" +
+                ((path) ? ";path=" + path : "") +
+                ((domain) ? ";domain=" + domain : "") +
+                ";expires=Thu, 01 Jan 1970 00:00:01 GMT";
+        }
+    }
 
     /*
         Fetches the Facebook login url from the backend.
@@ -105,7 +112,7 @@
     function getExternalLoginUrl(callback) {
         // Return URL for an HTML app is just a local page. This page does NOT need to exist in the app.
         // BUT the return URL has to be in the same domain in order to attach on load eventlisteners.
-        returnUrl = window.location.origin + '/oauthcallback/';
+        returnUrl = window.location.origin + '/home/oauthcallback/';
 
         $.ajax({
             url: apiUrl + "/api/Account/ExternalLogins",
